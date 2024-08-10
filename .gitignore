@@ -1,0 +1,15 @@
+/backend/env
+
+dist
+dist-ssr
+*.local
+
+# testing
+/coverage
+
+# misc
+.DS_Store
+*.pem
+
+# vercel
+.vercel
