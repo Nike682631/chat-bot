@@ -2,6 +2,8 @@ import React, { FormEvent, useEffect, useState } from 'react'
 import axios from 'axios'
 import { useIsMobile } from '../../hooks/windowsize'
 import { IoSend } from 'react-icons/io5'
+import { MdEdit } from 'react-icons/md'
+import { RiDeleteBin7Fill } from 'react-icons/ri'
 import { RxCross1 } from 'react-icons/rx'
 import { auth } from '../../firebase/firebase'
 
@@ -206,13 +208,13 @@ export default function ChatbotModal({
                 ) : (
                   <div
                     id="chatbot-body"
-                    className="relative flex-auto flex-col gap-2 overflow-scroll p-6 pb-0"
+                    className="relative flex flex-col gap-6 overflow-scroll p-6 pb-0"
                   >
                     {messages.map((message) => {
                       if (message.senderType === 'bot') {
                         return (
                           <div key={message.index} className="flex last:mb-6">
-                            <div className="flex w-1/2 gap-2">
+                            <div className="flex w-fit max-w-[75%] gap-2">
                               <img
                                 src={BOTIMAGE}
                                 className="size-8 rounded-full"
@@ -230,15 +232,29 @@ export default function ChatbotModal({
                         )
                       } else {
                         return (
-                          <div key={message.index} className="flex justify-end">
-                            <div className="flex w-1/2 justify-end gap-2">
-                              <div className="flex flex-col gap-1">
-                                <span className="text-end text-xs text-[#bbbbbb]">
-                                  {auth.currentUser?.displayName}
-                                </span>
-                                <p className="rounded-lg bg-[#7C37FE] p-2 text-white">
-                                  {message.text}
-                                </p>
+                          <div
+                            key={message.index}
+                            className="relative flex justify-end"
+                          >
+                            <div className="relative flex w-fit max-w-[75%] justify-end gap-2">
+                              <div className="group flex flex-col items-end gap-1">
+                                <div className="flex w-full items-end justify-end group-hover:justify-between">
+                                  {/* Icons container */}
+                                  <div className="hidden gap-2 group-hover:flex">
+                                    <button>
+                                      <MdEdit className="size-4 text-[#b4b4b4]" />
+                                    </button>
+                                    <button>
+                                      <RiDeleteBin7Fill className="size-4	text-red-700" />
+                                    </button>
+                                  </div>
+                                  <span className="text-end text-xs text-[#bbbbbb]">
+                                    {auth.currentUser?.displayName}
+                                  </span>
+                                </div>
+                                <div className=" relative flex min-h-[35px] min-w-[10%] items-center rounded-lg bg-[#7C37FE] p-2 transition-transform duration-300 hover:scale-105">
+                                  <p className="text-white">{message.text}</p>
+                                </div>
                               </div>
                               <img
                                 src={
