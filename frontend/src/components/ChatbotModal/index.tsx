@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { FormEvent, useEffect, useState } from 'react'
 import axios from 'axios'
 import { useIsMobile } from '../../hooks/windowsize'
 import { IoSend } from 'react-icons/io5'
@@ -34,7 +34,7 @@ const initialMessages: Message[] = [
 
 const Typing = () => {
   return (
-    <div className="ml-9 mt-2.5 flex h-10 w-20 items-center justify-center space-x-1 rounded-full bg-gray-100 p-1.5 px-4">
+    <div className="ml-9 mt-2.5 flex h-10 w-20 items-center justify-center space-x-1 rounded-full bg-gray-100 p-1.5 px-4 last:mb-6">
       <div className="size-2 animate-bounce rounded-full bg-gray-500 delay-0"></div>
       <div className="size-2 animate-bounce rounded-full bg-gray-500 delay-200"></div>
       <div className="delay-400 size-2 animate-bounce rounded-full bg-gray-500"></div>
@@ -74,9 +74,10 @@ export default function ChatbotModal({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [messages, setMessages] = useState<Message[]>([...initialMessages])
   const [isMessagesLoading, setIsMessagesLoading] = useState<boolean>(false)
-  const [isTyping, setIsTyping] = useState<boolean>(true)
+  const [isTyping, setIsTyping] = useState<boolean>(false)
 
   useEffect(() => {
+    if (!showModal) return
     const fetchData = async () => {
       try {
         const response = await axios.get(
@@ -95,16 +96,36 @@ export default function ChatbotModal({
       } catch (error) {
         console.error('Error fetching data:', error)
         return null
+      } finally {
+        setIsMessagesLoading(false)
       }
     }
     setIsMessagesLoading(true)
     fetchData()
-    setIsMessagesLoading(false)
   }, [showModal])
 
   const sendMessage = async () => {
+    const element = document.getElementById('chatbot-body')
+    if (!prompt || prompt.length === 0) {
+      alert('Prompt cannot be empty!')
+      return
+    }
     try {
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          index: prevMessages.length,
+          senderType: MessageSenderType.user,
+          text: prompt
+        }
+      ])
       setIsTyping(true)
+      setTimeout(() => {
+        if (element) {
+          element.scrollTop = element.scrollHeight + 24
+        }
+      }, 100)
+
       const response = await axios.get(
         `${import.meta.env.VITE_serverBaseUrl}/prompt`,
         {
@@ -112,15 +133,28 @@ export default function ChatbotModal({
         }
       )
       if (response.status === 200) {
-        console.log('response.data:', response.data)
-        setMessages([...initialMessages, response.data.messages])
+        const orderedMessages = response.data.data.messages.sort(
+          (a: { index: number }, b: { index: number }) => a.index - b.index
+        )
+        setMessages([...initialMessages, ...orderedMessages])
       }
-      setPrompt('')
     } catch (error) {
       console.error('Error sending prompt:', error)
       return null
+    } finally {
+      setPrompt('')
+      setIsTyping(false)
+      setTimeout(() => {
+        if (element) {
+          element.scrollTop = element.scrollHeight + 24
+        }
+      }, 100)
     }
-    setIsTyping(false)
+  }
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault() // Prevent page reload
+    sendMessage()
   }
 
   return (
@@ -170,11 +204,14 @@ export default function ChatbotModal({
                 {isMessagesLoading ? (
                   <Spinner />
                 ) : (
-                  <div className="relative flex-auto flex-col gap-2 overflow-scroll p-6">
+                  <div
+                    id="chatbot-body"
+                    className="relative flex-auto flex-col gap-2 overflow-scroll p-6 pb-0"
+                  >
                     {messages.map((message) => {
                       if (message.senderType === 'bot') {
                         return (
-                          <div key={message.index} className="flex">
+                          <div key={message.index} className="flex last:mb-6">
                             <div className="flex w-1/2 gap-2">
                               <img
                                 src={BOTIMAGE}
@@ -219,24 +256,25 @@ export default function ChatbotModal({
                   </div>
                 )}
                 {/*footer*/}
-                <div className="flex items-center justify-center gap-2 rounded-b border-t border-solid p-6">
-                  <input
-                    type="text"
-                    value={prompt}
-                    id="prompt"
-                    onChange={(e) => setPrompt(e.target.value)}
-                    className="block w-full rounded-lg border border-gray-300 p-2.5 text-sm"
-                    placeholder="Enter your query!"
-                    required
-                  />
-                  <button
-                    className="border-0"
-                    type="button"
-                    onClick={() => sendMessage()}
+                <>
+                  <form
+                    onSubmit={handleSubmit}
+                    className="flex items-center justify-center gap-2 rounded-b border-t border-solid p-6"
                   >
-                    <IoSend height={5} width={5} />
-                  </button>
-                </div>
+                    <input
+                      type="text"
+                      value={prompt}
+                      id="prompt"
+                      onChange={(e) => setPrompt(e.target.value)}
+                      className="block w-full rounded-lg border border-gray-300 p-2.5 text-sm"
+                      placeholder="Enter your query!"
+                      required
+                    />
+                    <button className="border-0" type="submit">
+                      <IoSend height={5} width={5} />
+                    </button>
+                  </form>
+                </>
               </div>
             </div>
           </div>
