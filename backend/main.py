@@ -54,57 +54,6 @@ def get_chat(user_id: str):
         return chat.to_dict()
     else:
         return {"message": "No document found for the specified userId."}
-    
-# @app.get('/prompt')
-# def get_response(user_id: str, prompt: str, index: Optional[int] = None):
-#     # Generate content using Generative AI model
-#     response = model.generate_content(prompt)
-#     generated_text = response.text.strip()
-
-#     # Create a Message object with the generated text
-#     new_message = Message(
-#         text=generated_text,
-#         index=index if index is not None else -1,  # Use -1 for new messages
-#         senderType=MessageSenderType.bot
-#     )
-    
-#     return create_or_update_message(user_id, new_message)
-
-
-# @app.post('/chats')
-# def create_or_update_message(user_id: str, message: Message):
-#     chats_ref = db.collection('chats')
-#     query = chats_ref.where("userId", "==", user_id).limit(1).get()
-
-#     if not query:
-#         # No chat found, create a new one
-#         chat_data = {
-#             "userId": user_id,
-#             "messages": [message.dict()]
-#         }
-#         chats_ref.add(chat_data)
-#         return {"message": "Chat created and message added.", "data": chat_data}
-
-#     # Chat exists, update or add message
-#     chat_doc = query[0]
-#     chat_data = chat_doc.to_dict()
-#     messages = chat_data.get("messages", [])
-
-#     # Check if message with the same index exists
-#     message_exists = False
-#     for msg in messages:
-#         if msg['index'] == message.index:
-#             msg.update(message.dict())
-#             message_exists = True
-#             break
-    
-#     if not message_exists:
-#         messages.append(message.dict())
-
-#     chat_doc.reference.update({"messages": messages})
-#     return {"message": "Message updated.", "data": chat_doc.to_dict()}
-
-
 
 @app.get('/prompt')
 def get_response(user_id: str, prompt: str, index: int = None):
@@ -208,4 +157,5 @@ def delete_message(user_id: str, index: int):
         raise HTTPException(status_code=404, detail="Message not found")
 
     chat_doc.reference.update({"messages": updated_messages})
-    return {"message": "Message deleted.", "data": chat_doc.to_dict()}
+    updated_chat_doc = chat_doc.reference.get()
+    return {"message": "Message deleted.", "data": updated_chat_doc.to_dict()}

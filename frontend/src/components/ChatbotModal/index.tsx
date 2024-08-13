@@ -36,7 +36,7 @@ const initialMessages: Message[] = [
 
 const Typing = () => {
   return (
-    <div className="ml-9 mt-2.5 flex h-10 w-20 items-center justify-center space-x-1 rounded-full bg-gray-100 p-1.5 px-4 last:mb-6">
+    <div className="ml-9 flex h-24 w-16 items-center justify-center space-x-1 rounded-full bg-gray-100 p-1.5 px-4 last:mb-6 last:pb-3">
       <div className="size-2 animate-bounce rounded-full bg-gray-500 delay-0"></div>
       <div className="size-2 animate-bounce rounded-full bg-gray-500 delay-200"></div>
       <div className="delay-400 size-2 animate-bounce rounded-full bg-gray-500"></div>
@@ -76,7 +76,8 @@ export default function ChatbotModal({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [messages, setMessages] = useState<Message[]>([...initialMessages])
   const [isMessagesLoading, setIsMessagesLoading] = useState<boolean>(false)
-  const [isTyping, setIsTyping] = useState<boolean>(false)
+  const [isTyping, setIsTyping] = useState<boolean>(true)
+  const chatBody = document.getElementById('chatbot-body')
 
   useEffect(() => {
     if (!showModal) return
@@ -100,6 +101,11 @@ export default function ChatbotModal({
         return null
       } finally {
         setIsMessagesLoading(false)
+        setTimeout(() => {
+          if (chatBody) {
+            chatBody.scrollTop = chatBody.scrollHeight + 24
+          }
+        }, 100)
       }
     }
     setIsMessagesLoading(true)
@@ -107,7 +113,6 @@ export default function ChatbotModal({
   }, [showModal])
 
   const sendMessage = async () => {
-    const element = document.getElementById('chatbot-body')
     if (!prompt || prompt.length === 0) {
       alert('Prompt cannot be empty!')
       return
@@ -123,8 +128,8 @@ export default function ChatbotModal({
       ])
       setIsTyping(true)
       setTimeout(() => {
-        if (element) {
-          element.scrollTop = element.scrollHeight + 24
+        if (chatBody) {
+          chatBody.scrollTop = chatBody.scrollHeight + 24
         }
       }, 100)
 
@@ -147,10 +152,34 @@ export default function ChatbotModal({
       setPrompt('')
       setIsTyping(false)
       setTimeout(() => {
-        if (element) {
-          element.scrollTop = element.scrollHeight + 24
+        if (chatBody) {
+          chatBody.scrollTop = chatBody.scrollHeight + 24
         }
       }, 100)
+    }
+  }
+  const deleteMessage = async (index: number) => {
+    try {
+      const filteredMessages = messages.filter(
+        (message) => message.index != index
+      )
+      setMessages(filteredMessages)
+
+      const response = await axios.delete(
+        `${import.meta.env.VITE_serverBaseUrl}/chats`,
+        {
+          params: { user_id: auth.currentUser?.uid, index }
+        }
+      )
+      if (response.status === 200) {
+        const orderedMessages = response.data.data.messages.sort(
+          (a: { index: number }, b: { index: number }) => a.index - b.index
+        )
+        setMessages([...initialMessages, ...orderedMessages])
+      }
+    } catch (error) {
+      console.error('Error sending prompt:', error)
+      return null
     }
   }
 
@@ -169,7 +198,7 @@ export default function ChatbotModal({
             } fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden outline-none focus:outline-none`}
           >
             <div
-              className={`mx-auto my-6 flex h-full items-center ${
+              className={`mx-auto mb-0 flex h-full items-center ${
                 isMobile ? 'size-full' : 'w-[35%] max-w-lg'
               }`}
             >
@@ -210,10 +239,10 @@ export default function ChatbotModal({
                     id="chatbot-body"
                     className="relative flex flex-col gap-6 overflow-scroll p-6 pb-0"
                   >
-                    {messages.map((message) => {
+                    {messages.map((message, index) => {
                       if (message.senderType === 'bot') {
                         return (
-                          <div key={message.index} className="flex last:mb-6">
+                          <div key={index} className="flex last:mb-6">
                             <div className="flex w-fit max-w-[75%] gap-2">
                               <img
                                 src={BOTIMAGE}
@@ -233,26 +262,30 @@ export default function ChatbotModal({
                       } else {
                         return (
                           <div
-                            key={message.index}
+                            key={index}
                             className="relative flex justify-end"
                           >
-                            <div className="relative flex w-fit max-w-[75%] justify-end gap-2">
-                              <div className="group flex flex-col items-end gap-1">
+                            <div className="relative flex min-w-[30%] max-w-[75%] justify-end gap-2">
+                              <div className="group flex w-full flex-col items-end gap-1">
                                 <div className="flex w-full items-end justify-end group-hover:justify-between">
                                   {/* Icons container */}
-                                  <div className="hidden gap-2 group-hover:flex">
+                                  <div className="hidden gap-0.5 group-hover:flex">
                                     <button>
                                       <MdEdit className="size-4 text-[#b4b4b4]" />
                                     </button>
-                                    <button>
+                                    <button
+                                      onClick={() =>
+                                        deleteMessage(message.index)
+                                      }
+                                    >
                                       <RiDeleteBin7Fill className="size-4	text-red-700" />
                                     </button>
                                   </div>
                                   <span className="text-end text-xs text-[#bbbbbb]">
-                                    {auth.currentUser?.displayName}
+                                    {auth.currentUser?.displayName?.slice(0, 3)}
                                   </span>
                                 </div>
-                                <div className=" relative flex min-h-[35px] min-w-[10%] items-center rounded-lg bg-[#7C37FE] p-2 transition-transform duration-300 hover:scale-105">
+                                <div className=" relative flex min-h-[35px] w-full min-w-[10%] items-center justify-center rounded-lg bg-[#7C37FE] p-2 transition-transform duration-300 hover:scale-105">
                                   <p className="text-white">{message.text}</p>
                                 </div>
                               </div>
@@ -285,6 +318,7 @@ export default function ChatbotModal({
                       className="block w-full rounded-lg border border-gray-300 p-2.5 text-sm"
                       placeholder="Enter your query!"
                       required
+                      autoComplete="off"
                     />
                     <button className="border-0" type="submit">
                       <IoSend height={5} width={5} />
