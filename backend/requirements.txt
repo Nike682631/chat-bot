@@ -1,0 +1,6 @@
+fastapi[standard]
+python-dotenv
+# google-api-core==2.12.0
+google.generativeai
+# requests==2.19
+# Pyrebase3
