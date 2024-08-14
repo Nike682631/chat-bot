@@ -9,6 +9,7 @@ import firebase_admin
 from firebase_admin import firestore
 from firebase_admin import credentials
 from enum import Enum
+import json
 
 # Load environment variables
 load_dotenv()
@@ -16,8 +17,20 @@ load_dotenv()
 # Initialize FastAPI app
 app = FastAPI()
 
-# Initialize Firebase Admin SDK
-cred = credentials.Certificate("./serviceAccountKey.json")
+# Load Firebase Admin SDK credentials from environment variable
+credentials_json = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
+if not credentials_json:
+    raise RuntimeError("Environment variable GOOGLE_APPLICATION_CREDENTIALS_JSON is not set")
+
+# Parse JSON
+try:
+    cred_dict = json.loads(credentials_json)
+    cred = credentials.Certificate(cred_dict)
+except json.JSONDecodeError:
+    raise RuntimeError("Invalid JSON format in GOOGLE_APPLICATION_CREDENTIALS_JSON")
+except Exception as e:
+    raise RuntimeError(f"Error loading Firebase credentials: {e}")
+
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 

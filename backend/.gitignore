@@ -1,3 +1,5 @@
 .env
 serviceAccountKey.json
 firebase_config.json
+.pytest_cache
+.vercel
