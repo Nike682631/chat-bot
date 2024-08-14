@@ -170,7 +170,7 @@ export default function ChatbotModal({
           params: payload
         }
       )
-      if (response.status === 200) {
+      if (response.status === 200 && response.data.data.messages) {
         const orderedMessages = response.data.data.messages.sort(
           (a: { index: number }, b: { index: number }) => a.index - b.index
         )
