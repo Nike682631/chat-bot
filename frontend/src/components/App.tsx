@@ -1,8 +1,8 @@
 import Avatar from 'components/Avatar'
 import logo from 'assets/logo.svg'
-import { signInWithPopup, signOut } from 'firebase/auth'
+import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth'
 import { auth, provider } from '../firebase/firebase'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import ChatbotModal from './ChatbotModal'
 
 const randoms = [
@@ -12,10 +12,20 @@ const randoms = [
 ]
 
 function App() {
-  const [isSignedIn, setIsSignedIn] = useState<boolean>(
-    auth.currentUser ? true : false
-  )
+  const [isSignedIn, setIsSignedIn] = useState<boolean>(false)
   const [showModal, setShowModal] = useState(false)
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsSignedIn(true)
+      } else {
+        setIsSignedIn(false)
+      }
+    })
+
+    return () => unsubscribe()
+  }, [])
 
   const googlePopUp = async () => {
     try {
