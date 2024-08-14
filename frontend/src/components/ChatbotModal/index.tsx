@@ -125,7 +125,10 @@ export default function ChatbotModal({
     if (editMessageIndex === -2 && (!prompt || prompt.length === 0)) {
       alert('Prompt cannot be empty!')
       return
-    } else if (!editMessageText || editMessageText.length === 0) {
+    } else if (
+      editMessageIndex !== -2 &&
+      (!editMessageText || editMessageText.length === 0)
+    ) {
       alert('Edited message cannot be empty!')
       return
     }
