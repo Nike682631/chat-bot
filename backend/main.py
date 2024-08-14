@@ -37,7 +37,7 @@ db = firestore.client()
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Adjust as necessary
+    allow_origins=[os.getenv('FRONTEND_URL')],  # Adjust as necessary
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -69,10 +69,11 @@ def get_chat(user_id: str):
 
 @app.get('/prompt')
 def get_response(user_id: str, prompt: str, index: int = None):
-    system_instruction = "You are having a chat with a person. It's possible that this is the start of chat. In that case you don't need to do anything. Otherwise following is the past chat summary of you with the user: "
     chat = get_chat(user_id)
-    for message in chat['messages']:
-        system_instruction = system_instruction + message['senderType'] + ':' + message['text'] + ' '
+    system_instruction = "You are having a chat with a person. It's possible that this is the start of chat. In that case you don't need to do anything. Otherwise following is the past chat summary of you with the user: "
+    if not 'message' in chat:
+        for message in chat['messages']:
+            system_instruction = system_instruction + message['senderType'] + ':' + message['text'] + ' '
 
     model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=system_instruction)
     # Generate content using Generative AI model

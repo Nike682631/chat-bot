@@ -42,7 +42,7 @@ type MessagePayloadType = {
 
 const Typing = () => {
   return (
-    <div className="ml-9 flex h-24 w-16 items-center justify-center space-x-1 rounded-full bg-gray-100 p-1.5 px-4 last:mb-6 last:pb-3">
+    <div className="ml-9 flex h-10 min-h-10 w-16 items-center justify-center space-x-1 rounded-full bg-gray-100 p-1.5 px-4 last:mb-6 last:pb-3">
       <div className="size-2 animate-bounce rounded-full bg-gray-500 delay-0"></div>
       <div className="size-2 animate-bounce rounded-full bg-gray-500 delay-200"></div>
       <div className="delay-400 size-2 animate-bounce rounded-full bg-gray-500"></div>
@@ -51,7 +51,10 @@ const Typing = () => {
 }
 
 const Spinner = () => (
-  <div role="status" className="flex h-[70%] items-center justify-center">
+  <div
+    role="status"
+    className="flex h-[70%] w-full items-center justify-center"
+  >
     <svg
       aria-hidden="true"
       className="size-8 animate-spin fill-blue-600 text-gray-200"
@@ -85,7 +88,7 @@ export default function ChatbotModal({
   const [isMessagesLoading, setIsMessagesLoading] = useState<boolean>(false)
   const [isTyping, setIsTyping] = useState<boolean>(false)
   const [isEditMessageTyping, setIsEditMessageTyping] = useState<boolean>(false)
-  const [editMessageIndex, setEditMessageIndex] = useState<number>(-2)
+  const [editMessageIndex, setEditMessageIndex] = useState<number>(-20)
   const chatBody = document.getElementById('chatbot-body')
 
   useEffect(() => {
@@ -122,18 +125,18 @@ export default function ChatbotModal({
   }, [showModal])
 
   const sendMessage = async () => {
-    if (editMessageIndex === -2 && (!prompt || prompt.length === 0)) {
+    if (editMessageIndex === -20 && (!prompt || prompt.length === 0)) {
       alert('Prompt cannot be empty!')
       return
     } else if (
-      editMessageIndex !== -2 &&
+      editMessageIndex !== -20 &&
       (!editMessageText || editMessageText.length === 0)
     ) {
       alert('Edited message cannot be empty!')
       return
     }
     try {
-      if (editMessageIndex === -2) {
+      if (editMessageIndex === -20) {
         setMessages((prevMessages) => [
           ...prevMessages,
           {
@@ -148,14 +151,15 @@ export default function ChatbotModal({
             chatBody.scrollTop = chatBody.scrollHeight + 24
           }
         }, 100)
+      } else {
+        setIsEditMessageTyping(true)
       }
-      setIsEditMessageTyping(true)
 
       const payload: MessagePayloadType = {
         prompt,
         user_id: auth.currentUser?.uid
       }
-      if (editMessageIndex !== -2) {
+      if (editMessageIndex !== -20) {
         payload['prompt'] = editMessageText
         payload['index'] = editMessageIndex
       }
@@ -179,14 +183,14 @@ export default function ChatbotModal({
       setPrompt('')
       setIsTyping(false)
       setIsEditMessageTyping(false)
-      if (editMessageIndex === -2) {
+      if (editMessageIndex === -20) {
         setTimeout(() => {
           if (chatBody) {
             chatBody.scrollTop = chatBody.scrollHeight + 24
           }
         }, 100)
       }
-      setEditMessageIndex(-2)
+      setEditMessageIndex(-20)
     }
   }
   const deleteMessage = async (index: number) => {
@@ -245,10 +249,10 @@ export default function ChatbotModal({
               <div
                 className={`${
                   isMobile ? 'h-full' : 'h-[90%]'
-                } relative flex w-full flex-col rounded-lg border-0 bg-white shadow-lg outline-none focus:outline-none`}
+                } relative grid w-full grid-flow-col	 grid-cols-1 grid-rows-9 rounded-lg border-0 bg-white shadow-lg outline-none focus:outline-none`}
               >
                 {/*header*/}
-                <div className="border-blueGray-200 flex items-center justify-between rounded-t p-5">
+                <div className="border-blueGray-200 row-span-2 flex items-center justify-between rounded-t p-5">
                   <div className="flex w-full flex-col">
                     <div className="w-full">
                       <button
@@ -271,135 +275,142 @@ export default function ChatbotModal({
                   </div>
                 </div>
                 {/*body*/}
-                {isMessagesLoading ? (
-                  <Spinner />
-                ) : (
-                  <div
-                    id="chatbot-body"
-                    className="relative flex flex-col gap-6 overflow-scroll p-6 pb-0"
-                  >
-                    {messages.map((message, index) => {
-                      if (message.senderType === 'bot') {
-                        if (
-                          editMessageIndex + 1 === message.index &&
-                          isEditMessageTyping
-                        ) {
+                <div className="row-span-6 flex w-full">
+                  {isMessagesLoading ? (
+                    <Spinner />
+                  ) : (
+                    <div
+                      id="chatbot-body"
+                      className="relative flex w-full flex-col gap-6 overflow-scroll px-6 pt-4"
+                    >
+                      {messages.map((message, index) => {
+                        if (message.senderType === 'bot') {
+                          if (
+                            editMessageIndex + 1 === message.index &&
+                            isEditMessageTyping
+                          ) {
+                            return (
+                              <>
+                                <Typing />
+                              </>
+                            )
+                          }
                           return (
-                            <>
-                              <Typing />
-                            </>
-                          )
-                        }
-                        return (
-                          <div key={index} className="flex last:mb-6">
-                            <div className="flex w-fit max-w-[75%] gap-2">
-                              <img
-                                src={BOTIMAGE}
-                                className="size-8 rounded-full"
-                              />
-                              <div className="flex flex-col gap-1">
-                                <span className="text-xs text-[#bbbbbb]">
-                                  {BOTNAME}
-                                </span>
-                                <p className="rounded-lg bg-[#F9FAFB] p-2">
-                                  {message.text}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      } else {
-                        if (editMessageIndex === message.index) {
-                          return (
-                            <div key={index} className="flex">
-                              <form
-                                onSubmit={handleSubmit}
-                                className="flex w-full flex-col items-end"
-                              >
-                                <div className="mb-4 w-3/4 justify-end rounded-lg border border-gray-200 bg-gray-50">
-                                  <div className="rounded-b-lg bg-white px-4 py-2">
-                                    <textarea
-                                      id="editor"
-                                      rows={4}
-                                      value={editMessageText}
-                                      onChange={(e) =>
-                                        setEditMessageText(e.target.value)
-                                      }
-                                      className="block w-full border-0 bg-white px-0 text-sm text-gray-800 outline-none"
-                                      placeholder="Enter text..."
-                                      required
-                                    ></textarea>
-                                  </div>
-                                </div>
-                                <div className="flex gap-2">
-                                  <button
-                                    type="submit"
-                                    className="inline-flex items-center rounded-lg bg-blue-700 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-800 focus:ring-4 focus:ring-blue-200"
-                                  >
-                                    Send
-                                  </button>
-                                  <button
-                                    onClick={() => setEditMessageIndex(-2)}
-                                    className="inline-flex items-center rounded-lg bg-red-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-red-800 focus:ring-4 focus:ring-blue-200"
-                                  >
-                                    cancel
-                                  </button>
-                                </div>
-                              </form>
-                            </div>
-                          )
-                        }
-                        return (
-                          <div
-                            key={index}
-                            className="relative flex justify-end"
-                          >
-                            <div className="relative flex min-w-[30%] max-w-[75%] justify-end gap-2">
-                              <div className="group flex w-full flex-col items-end gap-1">
-                                <div className="flex w-full items-end justify-end group-hover:justify-between">
-                                  {/* Icons container */}
-                                  <div className="hidden gap-0.5 group-hover:flex">
-                                    <button
-                                      onClick={() => editMessage(message.index)}
-                                    >
-                                      <MdEdit className="size-4 text-[#b4b4b4]" />
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        deleteMessage(message.index)
-                                      }
-                                    >
-                                      <RiDeleteBin7Fill className="size-4	text-red-700" />
-                                    </button>
-                                  </div>
-                                  <span className="text-end text-xs text-[#bbbbbb]">
-                                    {auth.currentUser?.displayName?.slice(0, 3)}
+                            <div key={index} className="flex last:mb-6">
+                              <div className="flex w-fit max-w-[75%] gap-2">
+                                <img
+                                  src={BOTIMAGE}
+                                  className="size-8 rounded-full"
+                                />
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-xs text-[#bbbbbb]">
+                                    {BOTNAME}
                                   </span>
-                                </div>
-                                <div className=" relative flex min-h-[35px] w-full min-w-[10%] items-center justify-center rounded-lg bg-[#7C37FE] p-2 transition-transform duration-300 hover:scale-105">
-                                  <p className="text-white">{message.text}</p>
+                                  <p className="rounded-lg bg-[#F9FAFB] p-2">
+                                    {message.text}
+                                  </p>
                                 </div>
                               </div>
-                              <img
-                                src={
-                                  auth.currentUser?.photoURL ||
-                                  'https://i.ibb.co/cNXwPMf/placeholder.png'
-                                }
-                                className="size-8 rounded-full"
-                              />
                             </div>
-                          </div>
-                        )
-                      }
-                    })}
-                    {isTyping && <Typing />}
-                  </div>
-                )}
+                          )
+                        } else {
+                          if (editMessageIndex === message.index) {
+                            return (
+                              <div key={index} className="flex">
+                                <form
+                                  onSubmit={handleSubmit}
+                                  className="flex w-full flex-col items-end"
+                                >
+                                  <div className="mb-4 w-3/4 justify-end rounded-lg border border-gray-200 bg-gray-50">
+                                    <div className="rounded-b-lg bg-white px-4 py-2">
+                                      <textarea
+                                        id="editor"
+                                        rows={4}
+                                        value={editMessageText}
+                                        onChange={(e) =>
+                                          setEditMessageText(e.target.value)
+                                        }
+                                        className="block w-full border-0 bg-white px-0 text-sm text-gray-800 outline-none"
+                                        placeholder="Enter text..."
+                                        required
+                                      ></textarea>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="submit"
+                                      className="inline-flex items-center rounded-lg bg-blue-700 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-800 focus:ring-4 focus:ring-blue-200"
+                                    >
+                                      Send
+                                    </button>
+                                    <button
+                                      onClick={() => setEditMessageIndex(-20)}
+                                      className="inline-flex items-center rounded-lg bg-red-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-red-800 focus:ring-4 focus:ring-blue-200"
+                                    >
+                                      cancel
+                                    </button>
+                                  </div>
+                                </form>
+                              </div>
+                            )
+                          }
+                          return (
+                            <div
+                              key={index}
+                              className="relative flex justify-end"
+                            >
+                              <div className="relative flex min-w-[30%] max-w-[75%] justify-end gap-2">
+                                <div className="group flex w-full flex-col items-end gap-1">
+                                  <div className="flex w-full items-end justify-end group-hover:justify-between">
+                                    {/* Icons container */}
+                                    <div className="hidden gap-0.5 group-hover:flex">
+                                      <button
+                                        onClick={() =>
+                                          editMessage(message.index)
+                                        }
+                                      >
+                                        <MdEdit className="size-4 text-[#b4b4b4]" />
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          deleteMessage(message.index)
+                                        }
+                                      >
+                                        <RiDeleteBin7Fill className="size-4	text-red-700" />
+                                      </button>
+                                    </div>
+                                    <span className="text-end text-xs text-[#bbbbbb]">
+                                      {auth.currentUser?.displayName?.slice(
+                                        0,
+                                        3
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className=" relative flex min-h-[35px] w-full min-w-[10%] items-center justify-center rounded-lg bg-[#7C37FE] p-2 transition-transform duration-300 hover:scale-105">
+                                    <p className="text-white">{message.text}</p>
+                                  </div>
+                                </div>
+                                <img
+                                  src={
+                                    auth.currentUser?.photoURL ||
+                                    'https://i.ibb.co/cNXwPMf/placeholder.png'
+                                  }
+                                  className="size-8 rounded-full"
+                                />
+                              </div>
+                            </div>
+                          )
+                        }
+                      })}
+                      {isTyping && <Typing />}
+                    </div>
+                  )}
+                </div>
                 {/*footer*/}
                 <>
                   <form
                     onSubmit={handleSubmit}
-                    className="flex items-center justify-center gap-2 rounded-b border-t border-solid p-6"
+                    className="row-span-1 flex items-center justify-center gap-2 rounded-b border-t border-solid p-6"
                   >
                     <input
                       type="text"
