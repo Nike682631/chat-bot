@@ -103,6 +103,8 @@ def create_or_update_message(user_id: str, user_message: Message, bot_message: M
 
     if not query:
         # No chat found, create a new one
+        user_message.index = 1
+        bot_message.index = 2
         chat_data = {
             "userId": user_id,
             "messages": [

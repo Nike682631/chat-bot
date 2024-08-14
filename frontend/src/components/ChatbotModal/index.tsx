@@ -101,7 +101,7 @@ export default function ChatbotModal({
             params: { user_id: auth.currentUser?.uid }
           }
         )
-        if (response.status === 200) {
+        if (response.status === 200 && response.data.messages) {
           const orderedMessages = response.data.messages.sort(
             (a: { index: number }, b: { index: number }) => a.index - b.index
           )
