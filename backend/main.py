@@ -32,7 +32,6 @@ app.add_middleware(
 
 # Initialize Generative AI model
 genai.configure(api_key=os.getenv('API_KEY'))
-model = genai.GenerativeModel('gemini-1.5-flash')
 
 class MessageSenderType(str, Enum):
     user = 'user'
@@ -57,6 +56,12 @@ def get_chat(user_id: str):
 
 @app.get('/prompt')
 def get_response(user_id: str, prompt: str, index: int = None):
+    system_instruction = "You are having a chat with a person. It's possible that this is the start of chat. In that case you don't need to do anything. Otherwise following is the past chat summary of you with the user: "
+    chat = get_chat(user_id)
+    for message in chat['messages']:
+        system_instruction = system_instruction + message['senderType'] + ':' + message['text'] + ' '
+
+    model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=system_instruction)
     # Generate content using Generative AI model
     response = model.generate_content(prompt)
     generated_text = response.text.strip()
