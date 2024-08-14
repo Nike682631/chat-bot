@@ -26,13 +26,19 @@ type Message = {
   text: string
 }
 
-const initialMessages: Message[] = [
+const initialMessage: Message[] = [
   {
-    index: 0,
+    index: -10,
     senderType: MessageSenderType.bot,
     text: 'Heyy, how can I help you today?'
   }
 ]
+
+type MessagePayloadType = {
+  user_id: string | undefined
+  prompt: string
+  index?: number
+}
 
 const Typing = () => {
   return (
@@ -48,7 +54,7 @@ const Spinner = () => (
   <div role="status" className="flex h-[70%] items-center justify-center">
     <svg
       aria-hidden="true"
-      className="size-8 animate-spin fill-blue-600 text-gray-200 dark:text-gray-600"
+      className="size-8 animate-spin fill-blue-600 text-gray-200"
       viewBox="0 0 100 101"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
@@ -73,10 +79,13 @@ export default function ChatbotModal({
   const isMobile = useIsMobile()
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [prompt, setPrompt] = useState<string>('')
+  const [editMessageText, setEditMessageText] = useState<string>('')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [messages, setMessages] = useState<Message[]>([...initialMessages])
+  const [messages, setMessages] = useState<Message[]>([...initialMessage])
   const [isMessagesLoading, setIsMessagesLoading] = useState<boolean>(false)
-  const [isTyping, setIsTyping] = useState<boolean>(true)
+  const [isTyping, setIsTyping] = useState<boolean>(false)
+  const [isEditMessageTyping, setIsEditMessageTyping] = useState<boolean>(false)
+  const [editMessageIndex, setEditMessageIndex] = useState<number>(-2)
   const chatBody = document.getElementById('chatbot-body')
 
   useEffect(() => {
@@ -94,7 +103,7 @@ export default function ChatbotModal({
             (a: { index: number }, b: { index: number }) => a.index - b.index
           )
 
-          setMessages([...initialMessages, ...orderedMessages])
+          setMessages([...initialMessage, ...orderedMessages])
         }
       } catch (error) {
         console.error('Error fetching data:', error)
@@ -113,37 +122,52 @@ export default function ChatbotModal({
   }, [showModal])
 
   const sendMessage = async () => {
-    if (!prompt || prompt.length === 0) {
+    if (editMessageIndex === -2 && (!prompt || prompt.length === 0)) {
       alert('Prompt cannot be empty!')
+      return
+    } else if (!editMessageText || editMessageText.length === 0) {
+      alert('Edited message cannot be empty!')
       return
     }
     try {
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        {
-          index: prevMessages.length,
-          senderType: MessageSenderType.user,
-          text: prompt
-        }
-      ])
-      setIsTyping(true)
-      setTimeout(() => {
-        if (chatBody) {
-          chatBody.scrollTop = chatBody.scrollHeight + 24
-        }
-      }, 100)
+      if (editMessageIndex === -2) {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            index: prevMessages.length,
+            senderType: MessageSenderType.user,
+            text: prompt
+          }
+        ])
+        setIsTyping(true)
+        setTimeout(() => {
+          if (chatBody) {
+            chatBody.scrollTop = chatBody.scrollHeight + 24
+          }
+        }, 100)
+      }
+      setIsEditMessageTyping(true)
+
+      const payload: MessagePayloadType = {
+        prompt,
+        user_id: auth.currentUser?.uid
+      }
+      if (editMessageIndex !== -2) {
+        payload['prompt'] = editMessageText
+        payload['index'] = editMessageIndex
+      }
 
       const response = await axios.get(
         `${import.meta.env.VITE_serverBaseUrl}/prompt`,
         {
-          params: { prompt, user_id: auth.currentUser?.uid }
+          params: payload
         }
       )
       if (response.status === 200) {
         const orderedMessages = response.data.data.messages.sort(
           (a: { index: number }, b: { index: number }) => a.index - b.index
         )
-        setMessages([...initialMessages, ...orderedMessages])
+        setMessages([...initialMessage, ...orderedMessages])
       }
     } catch (error) {
       console.error('Error sending prompt:', error)
@@ -151,11 +175,15 @@ export default function ChatbotModal({
     } finally {
       setPrompt('')
       setIsTyping(false)
-      setTimeout(() => {
-        if (chatBody) {
-          chatBody.scrollTop = chatBody.scrollHeight + 24
-        }
-      }, 100)
+      setIsEditMessageTyping(false)
+      if (editMessageIndex === -2) {
+        setTimeout(() => {
+          if (chatBody) {
+            chatBody.scrollTop = chatBody.scrollHeight + 24
+          }
+        }, 100)
+      }
+      setEditMessageIndex(-2)
     }
   }
   const deleteMessage = async (index: number) => {
@@ -175,11 +203,19 @@ export default function ChatbotModal({
         const orderedMessages = response.data.data.messages.sort(
           (a: { index: number }, b: { index: number }) => a.index - b.index
         )
-        setMessages([...initialMessages, ...orderedMessages])
+        setMessages([...initialMessage, ...orderedMessages])
       }
     } catch (error) {
       console.error('Error sending prompt:', error)
       return null
+    }
+  }
+
+  const editMessage = (index: number) => {
+    setEditMessageIndex(index)
+    const message = messages.find((message) => message.index === index)
+    if (message) {
+      setEditMessageText(message?.text)
     }
   }
 
@@ -241,6 +277,16 @@ export default function ChatbotModal({
                   >
                     {messages.map((message, index) => {
                       if (message.senderType === 'bot') {
+                        if (
+                          editMessageIndex + 1 === message.index &&
+                          isEditMessageTyping
+                        ) {
+                          return (
+                            <>
+                              <Typing />
+                            </>
+                          )
+                        }
                         return (
                           <div key={index} className="flex last:mb-6">
                             <div className="flex w-fit max-w-[75%] gap-2">
@@ -260,6 +306,46 @@ export default function ChatbotModal({
                           </div>
                         )
                       } else {
+                        if (editMessageIndex === message.index) {
+                          return (
+                            <div key={index} className="flex">
+                              <form
+                                onSubmit={handleSubmit}
+                                className="flex w-full flex-col items-end"
+                              >
+                                <div className="mb-4 w-3/4 justify-end rounded-lg border border-gray-200 bg-gray-50">
+                                  <div className="rounded-b-lg bg-white px-4 py-2">
+                                    <textarea
+                                      id="editor"
+                                      rows={4}
+                                      value={editMessageText}
+                                      onChange={(e) =>
+                                        setEditMessageText(e.target.value)
+                                      }
+                                      className="block w-full border-0 bg-white px-0 text-sm text-gray-800 outline-none"
+                                      placeholder="Enter text..."
+                                      required
+                                    ></textarea>
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    type="submit"
+                                    className="inline-flex items-center rounded-lg bg-blue-700 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-800 focus:ring-4 focus:ring-blue-200"
+                                  >
+                                    Send
+                                  </button>
+                                  <button
+                                    onClick={() => setEditMessageIndex(-2)}
+                                    className="inline-flex items-center rounded-lg bg-red-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-red-800 focus:ring-4 focus:ring-blue-200"
+                                  >
+                                    cancel
+                                  </button>
+                                </div>
+                              </form>
+                            </div>
+                          )
+                        }
                         return (
                           <div
                             key={index}
@@ -270,7 +356,9 @@ export default function ChatbotModal({
                                 <div className="flex w-full items-end justify-end group-hover:justify-between">
                                   {/* Icons container */}
                                   <div className="hidden gap-0.5 group-hover:flex">
-                                    <button>
+                                    <button
+                                      onClick={() => editMessage(message.index)}
+                                    >
                                       <MdEdit className="size-4 text-[#b4b4b4]" />
                                     </button>
                                     <button
